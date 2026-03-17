@@ -37,6 +37,7 @@ export default function TicketDetailPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
 
   const fetchTicket = useCallback(async () => {
     try {
@@ -72,11 +73,12 @@ export default function TicketDetailPage() {
 
   const handleCallInsurance = async () => {
     setCalling(true);
+    setError('');
     try {
       await triggerCall(id);
       fetchTicket();
     } catch (e) {
-      alert('Failed to initiate call: ' + (e.response?.data?.detail || e.message));
+      setError('Failed to initiate call: ' + (e.response?.data?.detail || e.message));
     }
     setCalling(false);
   };
@@ -93,7 +95,7 @@ export default function TicketDetailPage() {
       setBenefitsForm({ deductible_individual: '', deductible_met: '', oop_max: '', coinsurance_percentage: '', reimbursement_method: '' });
       fetchTicket();
     } catch (e) {
-      alert('Failed to add benefits');
+      setError('Failed to add benefits: ' + (e.response?.data?.detail || e.message));
     }
   };
 
@@ -102,7 +104,7 @@ export default function TicketDetailPage() {
       await generateEstimate({ ticket_id: id });
       fetchTicket();
     } catch (e) {
-      alert('Failed: ' + (e.response?.data?.detail || e.message));
+      setError('Failed to generate estimate: ' + (e.response?.data?.detail || e.message));
     }
   };
 
@@ -113,7 +115,7 @@ export default function TicketDetailPage() {
       setSent(true);
       fetchTicket();
     } catch (e) {
-      alert('Failed to send: ' + (e.response?.data?.detail || e.message));
+      setError('Failed to send to patient: ' + (e.response?.data?.detail || e.message));
     }
     setSending(false);
   };
@@ -140,7 +142,7 @@ export default function TicketDetailPage() {
       await hangupCall(callLogId);
       fetchTicket();
     } catch (e) {
-      alert('Failed to hang up: ' + (e.response?.data?.detail || e.message));
+      setError('Failed to hang up: ' + (e.response?.data?.detail || e.message));
     }
     setHangingUp(null);
   };
@@ -152,7 +154,7 @@ export default function TicketDetailPage() {
       await uploadFile(id, file, 'other');
       fetchTicket();
     } catch (err) {
-      alert('Upload failed');
+      setError('Upload failed: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -183,6 +185,17 @@ export default function TicketDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-start justify-between gap-2 text-sm text-red-700">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            {error}
+          </div>
+          <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 shrink-0">✕</button>
+        </div>
+      )}
 
       {/* Live Call Progress */}
       {activeCall && (

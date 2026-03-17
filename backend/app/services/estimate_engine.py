@@ -5,6 +5,8 @@ from app.models.benefits import BenefitsData
 
 class EstimateEngine:
     def calculate(self, charge_amount: Decimal, benefits: BenefitsData) -> dict:
+        if not charge_amount or charge_amount <= 0:
+            raise ValueError("charge_amount must be greater than zero")
         deductible = benefits.deductible_individual or Decimal("0")
         deductible_met = benefits.deductible_met or Decimal("0")
         coinsurance_pct = benefits.coinsurance_percentage or 0

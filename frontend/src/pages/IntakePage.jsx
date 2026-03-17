@@ -28,10 +28,12 @@ export default function IntakePage() {
     provider_npi: '',
     visit_date: '',
     cpt_codes: '',
+    diagnosis_codes: '',
     charge_amount: '',
     notes: '',
   });
   const [files, setFiles] = useState({ card_front: null, card_back: null, superbill: null });
+  const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -89,17 +91,19 @@ export default function IntakePage() {
       });
       setCustomCarrier({ name: '', phone: '', notes: '' });
     } catch (e) {
-      alert('Failed to add carrier');
+      setError('Failed to add carrier. Please try again.');
     }
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setError('');
     try {
       const payload = {
         ...form,
         carrier_id: form.carrier_id || null,
-        cpt_codes: form.cpt_codes ? form.cpt_codes.split(',').map((s) => s.trim()) : [],
+        cpt_codes: form.cpt_codes ? form.cpt_codes.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        diagnosis_codes: form.diagnosis_codes ? form.diagnosis_codes.split(',').map((s) => s.trim()).filter(Boolean) : [],
         charge_amount: form.charge_amount ? parseFloat(form.charge_amount) : null,
         visit_date: form.visit_date || null,
         patient_dob: form.patient_dob || null,
@@ -111,7 +115,7 @@ export default function IntakePage() {
       navigate(`/tickets/${ticket.id}`);
     } catch (e) {
       console.error('Failed to create ticket', e);
-      alert('Failed to create ticket. Please try again.');
+      setError(e.response?.data?.detail || 'Failed to create ticket. Please try again.');
     }
     setSubmitting(false);
   };
@@ -148,6 +152,13 @@ export default function IntakePage() {
           </div>
         ))}
       </div>
+
+      {error && (
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-sm text-red-700">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          {error}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {step === 0 && (
@@ -356,6 +367,17 @@ export default function IntakePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Diagnosis Codes / ICD-10 (comma-separated)
+              </label>
+              <input
+                value={form.diagnosis_codes}
+                onChange={update('diagnosis_codes')}
+                placeholder="M54.5, Z12.11"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Charge Amount ($)
               </label>
               <input
@@ -450,6 +472,9 @@ export default function IntakePage() {
               </div>
               <div>
                 <span className="text-gray-500">CPT Codes:</span> {form.cpt_codes || '-'}
+              </div>
+              <div>
+                <span className="text-gray-500">Diagnosis:</span> {form.diagnosis_codes || '-'}
               </div>
               <div>
                 <span className="text-gray-500">Charge:</span>{' '}
