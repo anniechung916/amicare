@@ -10,14 +10,14 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
-    const result = signup(name, email, password);
+    const result = await signup(name, email, password);
     if (result.success) {
       navigate('/dashboard');
     } else {

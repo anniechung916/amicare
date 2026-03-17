@@ -26,8 +26,10 @@ _AUTH_EXEMPT_PREFIXES = (
     "/api/claims/",
     "/ws",
     "/audio/",
-    "/",
 )
+
+# Exact paths that bypass auth (root for health/favicon in production)
+_AUTH_EXEMPT_EXACT = {"/", "/favicon.ico"}
 
 
 class JWTMiddleware(BaseHTTPMiddleware):
@@ -39,7 +41,7 @@ class JWTMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Exempt paths
-        if any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES) and path != "/api/":
+        if path in _AUTH_EXEMPT_EXACT or any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES):
             return await call_next(request)
 
         # Require Bearer token for all other /api/* routes
