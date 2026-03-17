@@ -37,6 +37,8 @@ class Ticket(Base):
     group_number: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     provider_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     provider_npi: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    provider_tax_id: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    service_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     visit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     cpt_codes: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     charge_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)

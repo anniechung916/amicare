@@ -31,6 +31,13 @@ class ElevenLabsCallService:
         )
 
     def _dynamic_variables(self, ticket: Ticket) -> dict:
+        service_type_labels = {
+            "medical": "medical",
+            "dental": "dental",
+            "mental_health": "mental health",
+            "substance_abuse": "substance abuse",
+        }
+        raw_service = getattr(ticket, "service_type", None) or "medical"
         return {
             "patient_name": getattr(ticket, "patient_name", None) or "the patient",
             "patient_dob": str(ticket.patient_dob) if ticket and ticket.patient_dob else "unknown",
@@ -40,6 +47,8 @@ class ElevenLabsCallService:
             "visit_date": str(ticket.visit_date) if ticket and ticket.visit_date else "the date of service",
             "provider_name": getattr(ticket, "provider_name", None) or "our provider",
             "provider_npi": getattr(ticket, "provider_npi", None) or "N/A",
+            "provider_tax_id": getattr(ticket, "provider_tax_id", None) or "N/A",
+            "service_type": service_type_labels.get(raw_service, raw_service),
             "benefits_questions": self._build_benefits_questions(ticket),
         }
 

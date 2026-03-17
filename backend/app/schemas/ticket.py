@@ -25,6 +25,8 @@ class TicketCreate(BaseModel):
     group_number: Optional[str] = None
     provider_name: Optional[str] = None
     provider_npi: Optional[str] = None
+    provider_tax_id: Optional[str] = None
+    service_type: Optional[str] = None
     visit_date: Optional[date] = None
     cpt_codes: Optional[list[str]] = None
     charge_amount: Optional[Decimal] = None
@@ -43,6 +45,8 @@ class TicketUpdate(BaseModel):
     group_number: Optional[str] = None
     provider_name: Optional[str] = None
     provider_npi: Optional[str] = None
+    provider_tax_id: Optional[str] = None
+    service_type: Optional[str] = None
     visit_date: Optional[date] = None
     cpt_codes: Optional[list[str]] = None
     charge_amount: Optional[Decimal] = None
@@ -63,6 +67,8 @@ class TicketResponse(BaseModel):
     group_number: Optional[str]
     provider_name: Optional[str]
     provider_npi: Optional[str]
+    provider_tax_id: Optional[str]
+    service_type: Optional[str]
     visit_date: Optional[date]
     cpt_codes: Optional[list[str]]
     charge_amount: Optional[Decimal]

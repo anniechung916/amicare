@@ -26,6 +26,8 @@ export default function IntakePage() {
     group_number: '',
     provider_name: '',
     provider_npi: '',
+    provider_tax_id: '',
+    service_type: '',
     visit_date: '',
     cpt_codes: '',
     diagnosis_codes: '',
@@ -348,8 +350,22 @@ export default function IntakePage() {
               <input value={form.provider_name} onChange={update('provider_name')} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Provider NPI</label>
-              <input value={form.provider_npi} onChange={update('provider_npi')} className={inputClass} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Provider NPI *</label>
+              <input value={form.provider_npi} onChange={update('provider_npi')} placeholder="10-digit NPI number" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Provider Tax ID *</label>
+              <input value={form.provider_tax_id} onChange={update('provider_tax_id')} placeholder="XX-XXXXXXX" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Service Type *</label>
+              <select value={form.service_type} onChange={update('service_type')} className={inputClass}>
+                <option value="">Select service type...</option>
+                <option value="medical">Medical</option>
+                <option value="dental">Dental</option>
+                <option value="mental_health">Mental Health</option>
+                <option value="substance_abuse">Substance Abuse</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Visit Date</label>
@@ -469,6 +485,12 @@ export default function IntakePage() {
                 <span className="text-gray-500">NPI:</span> {form.provider_npi || '-'}
               </div>
               <div>
+                <span className="text-gray-500">Tax ID:</span> {form.provider_tax_id || '-'}
+              </div>
+              <div>
+                <span className="text-gray-500">Service Type:</span> {form.service_type ? form.service_type.replace('_', ' ') : '-'}
+              </div>
+              <div>
                 <span className="text-gray-500">Visit Date:</span> {form.visit_date || '-'}
               </div>
               <div>
@@ -507,7 +529,8 @@ export default function IntakePage() {
               onClick={() => setStep(step + 1)}
               disabled={
                 (step === 0 && !form.patient_name) ||
-                (step === 1 && !form.insurance_company)
+                (step === 1 && !form.insurance_company) ||
+                (step === 2 && (!form.provider_npi || !form.provider_tax_id || !form.service_type))
               }
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
