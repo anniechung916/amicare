@@ -61,6 +61,7 @@ export default function IntakePage() {
     setSelectedCarrier(carrier);
     if (carrier) {
       const phone =
+        carrier.phone_numbers?.provider_services ||
         carrier.phone_numbers?.oon_benefits_verification ||
         carrier.phone_numbers?.customer_service ||
         '';
@@ -317,14 +318,14 @@ export default function IntakePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Insurance Phone Number
+                Insurance Provider Services Line
               </label>
               <input
                 type="tel"
                 value={form.insurance_phone}
                 onChange={update('insurance_phone')}
                 className={inputClass}
-                placeholder={selectedCarrier ? 'Auto-filled from carrier' : ''}
+                placeholder={selectedCarrier ? 'Auto-filled from carrier' : 'Provider services phone number'}
               />
             </div>
             <div>
