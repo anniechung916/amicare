@@ -46,8 +46,8 @@ class ElevenLabsCallService:
             "cpt_codes": ", ".join(ticket.cpt_codes or []) if ticket and ticket.cpt_codes else "the relevant procedure codes",
             "visit_date": str(ticket.visit_date) if ticket and ticket.visit_date else "the date of service",
             "provider_name": getattr(ticket, "provider_name", None) or "our provider",
-            "provider_npi": getattr(ticket, "provider_npi", None) or "N/A",
-            "provider_tax_id": getattr(ticket, "provider_tax_id", None) or "N/A",
+            "provider_npi": getattr(ticket, "provider_npi", None) or "",
+            "provider_tax_id": getattr(ticket, "provider_tax_id", None) or "",
             "service_type": service_type_labels.get(raw_service, raw_service),
             "benefits_questions": self._build_benefits_questions(ticket),
         }

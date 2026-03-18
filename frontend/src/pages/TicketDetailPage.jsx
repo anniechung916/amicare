@@ -6,7 +6,7 @@ import { addBenefits, generateEstimate } from '../api/estimates';
 import { notifyPatient } from '../api/notify';
 import StatusBadge from '../components/common/StatusBadge';
 import useWebSocket from '../hooks/useWebSocket';
-import { Phone, PhoneOff, FileText, ChevronDown, ChevronUp, Play, DollarSign, Info, AlertTriangle, Clock, Send, Copy, CheckCheck } from 'lucide-react';
+import { Phone, PhoneOff, FileText, ChevronDown, ChevronUp, Play, DollarSign, Info, AlertTriangle, Clock, Send, Copy, CheckCheck, Pencil, X } from 'lucide-react';
 import CallProgressBar from '../components/CallProgressBar';
 
 const STATUS_OPTIONS = [
@@ -38,6 +38,9 @@ export default function TicketDetailPage() {
   const [sent, setSent] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchTicket = useCallback(async () => {
     try {
@@ -147,6 +150,47 @@ export default function TicketDetailPage() {
     setHangingUp(null);
   };
 
+  const handleOpenEdit = () => {
+    setEditForm({
+      patient_name: ticket.patient_name || '',
+      patient_email: ticket.patient_email || '',
+      patient_phone: ticket.patient_phone || '',
+      patient_dob: ticket.patient_dob || '',
+      insurance_company: ticket.insurance_company || '',
+      insurance_phone: ticket.insurance_phone || '',
+      policy_number: ticket.policy_number || '',
+      group_number: ticket.group_number || '',
+      provider_name: ticket.provider_name || '',
+      provider_npi: ticket.provider_npi || '',
+      provider_tax_id: ticket.provider_tax_id || '',
+      service_type: ticket.service_type || '',
+      visit_date: ticket.visit_date || '',
+      cpt_codes: ticket.cpt_codes?.join(', ') || '',
+      diagnosis_codes: ticket.diagnosis_codes?.join(', ') || '',
+      charge_amount: ticket.charge_amount || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setEditSaving(true);
+    try {
+      const payload = { ...editForm };
+      if (payload.cpt_codes) payload.cpt_codes = payload.cpt_codes.split(',').map(s => s.trim()).filter(Boolean);
+      else payload.cpt_codes = [];
+      if (payload.diagnosis_codes) payload.diagnosis_codes = payload.diagnosis_codes.split(',').map(s => s.trim()).filter(Boolean);
+      else payload.diagnosis_codes = [];
+      if (payload.charge_amount !== '') payload.charge_amount = parseFloat(payload.charge_amount);
+      await updateTicket(id, payload);
+      setShowEditModal(false);
+      fetchTicket();
+    } catch (e) {
+      setError('Failed to save: ' + (e.response?.data?.detail || e.message));
+    }
+    setEditSaving(false);
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -172,6 +216,12 @@ export default function TicketDetailPage() {
           <p className="text-sm text-gray-500">Ticket {ticket.id.slice(0, 8)}... | Created {new Date(ticket.created_at).toLocaleDateString()}</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenEdit}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <Pencil size={14} /> Edit Ticket
+          </button>
           <select value={ticket.status} onChange={handleStatusChange} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
             {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
           </select>
@@ -225,6 +275,8 @@ export default function TicketDetailPage() {
           <div className="space-y-2 text-sm">
             <div><span className="text-gray-500">Provider:</span> {ticket.provider_name || '-'}</div>
             <div><span className="text-gray-500">NPI:</span> {ticket.provider_npi || '-'}</div>
+            <div><span className="text-gray-500">Tax ID:</span> {ticket.provider_tax_id || '-'}</div>
+            <div><span className="text-gray-500">Service Type:</span> {ticket.service_type ? ticket.service_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '-'}</div>
             <div><span className="text-gray-500">Visit Date:</span> {ticket.visit_date || '-'}</div>
             <div><span className="text-gray-500">CPT Codes:</span> {ticket.cpt_codes?.join(', ') || '-'}</div>
             <div><span className="text-gray-500">Charge:</span> {ticket.charge_amount ? `$${ticket.charge_amount}` : '-'}</div>
@@ -527,6 +579,126 @@ export default function TicketDetailPage() {
           </>
         ) : <p className="text-sm text-gray-400">No estimates yet. Add benefits data first, then generate.</p>}
       </div>
+
+      {/* Edit Ticket Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-base font-semibold text-gray-900">Edit Ticket</h2>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <form onSubmit={handleEditSave} className="px-6 py-4 space-y-5">
+              {/* Patient */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Patient</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Name</label>
+                    <input value={editForm.patient_name} onChange={e => setEditForm({...editForm, patient_name: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Date of Birth</label>
+                    <input type="date" value={editForm.patient_dob} onChange={e => setEditForm({...editForm, patient_dob: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Email</label>
+                    <input type="email" value={editForm.patient_email} onChange={e => setEditForm({...editForm, patient_email: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                    <input value={editForm.patient_phone} onChange={e => setEditForm({...editForm, patient_phone: e.target.value})} className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Insurance */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Insurance</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Insurance Company</label>
+                    <input value={editForm.insurance_company} onChange={e => setEditForm({...editForm, insurance_company: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Provider Services Phone</label>
+                    <input value={editForm.insurance_phone} onChange={e => setEditForm({...editForm, insurance_phone: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Policy #</label>
+                    <input value={editForm.policy_number} onChange={e => setEditForm({...editForm, policy_number: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Group #</label>
+                    <input value={editForm.group_number} onChange={e => setEditForm({...editForm, group_number: e.target.value})} className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Provider */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Provider</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Provider Name</label>
+                    <input value={editForm.provider_name} onChange={e => setEditForm({...editForm, provider_name: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">NPI</label>
+                    <input value={editForm.provider_npi} onChange={e => setEditForm({...editForm, provider_npi: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Tax ID</label>
+                    <input value={editForm.provider_tax_id} onChange={e => setEditForm({...editForm, provider_tax_id: e.target.value})} placeholder="XX-XXXXXXX" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Service Type</label>
+                    <select value={editForm.service_type} onChange={e => setEditForm({...editForm, service_type: e.target.value})} className={inputClass}>
+                      <option value="">Select...</option>
+                      <option value="medical">Medical</option>
+                      <option value="dental">Dental</option>
+                      <option value="mental_health">Mental Health</option>
+                      <option value="substance_abuse">Substance Abuse</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visit */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Visit</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Visit Date</label>
+                    <input type="date" value={editForm.visit_date} onChange={e => setEditForm({...editForm, visit_date: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Charge Amount ($)</label>
+                    <input type="number" step="0.01" value={editForm.charge_amount} onChange={e => setEditForm({...editForm, charge_amount: e.target.value})} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">CPT Codes (comma-separated)</label>
+                    <input value={editForm.cpt_codes} onChange={e => setEditForm({...editForm, cpt_codes: e.target.value})} placeholder="99213, 93000" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Diagnosis Codes (comma-separated)</label>
+                    <input value={editForm.diagnosis_codes} onChange={e => setEditForm({...editForm, diagnosis_codes: e.target.value})} placeholder="Z00.00" className={inputClass} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editSaving} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                  {editSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,6 +29,7 @@ class TicketCreate(BaseModel):
     service_type: Optional[str] = None
     visit_date: Optional[date] = None
     cpt_codes: Optional[list[str]] = None
+    diagnosis_codes: Optional[list[str]] = None
     charge_amount: Optional[Decimal] = None
     notes: Optional[str] = None
 
@@ -49,6 +50,7 @@ class TicketUpdate(BaseModel):
     service_type: Optional[str] = None
     visit_date: Optional[date] = None
     cpt_codes: Optional[list[str]] = None
+    diagnosis_codes: Optional[list[str]] = None
     charge_amount: Optional[Decimal] = None
     status: Optional[TicketStatus] = None
     notes: Optional[str] = None
@@ -71,6 +73,7 @@ class TicketResponse(BaseModel):
     service_type: Optional[str]
     visit_date: Optional[date]
     cpt_codes: Optional[list[str]]
+    diagnosis_codes: Optional[list[str]]
     charge_amount: Optional[Decimal]
     status: TicketStatus
     notes: Optional[str]

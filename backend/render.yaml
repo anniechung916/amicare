@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: amicare-backend
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # set manually in Render dashboard
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: TWILIO_WEBHOOK_BASE_URL
+        sync: false  # your Render backend URL e.g. https://amicare-backend.onrender.com
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_AGENT_ID
+        sync: false
+      - key: ELEVENLABS_PHONE_NUMBER_ID
+        sync: false
+      - key: FERNET_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: BACKEND_CORS_ORIGINS
+        sync: false  # your Vercel frontend URL e.g. https://amicare.vercel.app
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: APP_BASE_URL
+        sync: false  # your Vercel frontend URL
+      - key: RESEND_API_KEY
+        sync: false
+      - key: NOTIFICATION_FROM_EMAIL
+        value: estimates@amicare.app
+      - key: OFFICE_TRANSFER_NUMBER
+        sync: false
+      - key: TEST_MODE
+        value: "false"
+      - key: TEST_MODE_MAX_SECONDS
+        value: "600"

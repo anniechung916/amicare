@@ -9,7 +9,8 @@ export default function useWebSocket(onMessage) {
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const token = localStorage.getItem('amicare_token') || '';
-      const ws = new WebSocket(`${protocol}://${window.location.host}/ws?token=${token}`);
+      const wsBase = import.meta.env.VITE_WS_URL || `${protocol}://${window.location.host}`;
+      const ws = new WebSocket(`${wsBase}/ws?token=${token}`);
 
       ws.onopen = () => {
         console.log('WebSocket connected');
