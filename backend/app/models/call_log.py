@@ -29,7 +29,10 @@ class CallLog(Base):
     ticket_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tickets.id"))
     call_sid: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     phone_number: Mapped[str] = mapped_column(String(50))
-    status: Mapped[CallStatus] = mapped_column(Enum(CallStatus), default=CallStatus.QUEUED)
+    status: Mapped[CallStatus] = mapped_column(
+        Enum(CallStatus, values_callable=lambda e: [x.value for x in e]),
+        default=CallStatus.QUEUED,
+    )
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

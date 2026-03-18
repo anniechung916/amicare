@@ -1,9 +1,13 @@
+import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import select
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -13,6 +17,8 @@ from app.database import AsyncSessionLocal
 from app.routers import tickets, calls, estimates, uploads, websocket, carriers, auth, claims
 from app.routers.auth import decode_token
 from app.services.carrier_seed import seed_carriers
+
+logger = logging.getLogger("amicare.startup")
 
 # Paths that bypass JWT auth
 # Twilio webhooks must be unauthenticated (called by Twilio's servers)
@@ -59,6 +65,72 @@ class JWTMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+async def _reconcile_stale_calls():
+    """On startup, mark any calls still 'active' in DB that ElevenLabs considers done."""
+    from app.models.call_log import CallLog, CallStatus
+    from app.services.elevenlabs_call_service import elevenlabs_call_service
+
+    active_statuses = [
+        CallStatus.QUEUED, CallStatus.RINGING,
+        CallStatus.IN_PROGRESS, CallStatus.ON_HOLD, CallStatus.TRANSFERRING,
+    ]
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(CallLog).where(CallLog.status.in_(active_statuses))
+        )
+        stale = result.scalars().all()
+
+    if not stale:
+        return
+
+    logger.info(f"Reconciling {len(stale)} stale call(s) on startup")
+    for call_log in stale:
+        conversation_id = call_log.summary  # stored here by call_orchestrator
+        if not conversation_id:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(CallLog).where(CallLog.id == call_log.id))
+                cl = result.scalar_one_or_none()
+                if cl:
+                    cl.status = CallStatus.COMPLETED
+                    cl.call_outcome = "unknown"
+                    cl.ended_at = cl.ended_at or datetime.utcnow()
+                    await db.commit()
+            continue
+        try:
+            data = await elevenlabs_call_service.get_conversation(conversation_id)
+            el_status = data.get("status")
+            if el_status == "done":
+                async with AsyncSessionLocal() as db:
+                    result = await db.execute(select(CallLog).where(CallLog.id == call_log.id))
+                    cl = result.scalar_one_or_none()
+                    if cl:
+                        cl.status = CallStatus.COMPLETED
+                        cl.call_outcome = "success"
+                        cl.ended_at = cl.ended_at or datetime.utcnow()
+                        secs = data.get("call_duration_secs") or data.get("metadata", {}).get("call_duration_secs")
+                        if secs:
+                            cl.duration_seconds = int(secs)
+                        items = data.get("transcript", [])
+                        if items:
+                            lines = [
+                                f"[{'Agent' if i.get('role') == 'agent' else 'Insurance Rep'}]: {(i.get('message') or '').strip()}"
+                                for i in items if (i.get('message') or '').strip()
+                            ]
+                            cl.transcript = "\n".join(lines)
+                        await db.commit()
+                        logger.info(f"Reconciled stale call {call_log.id} → completed")
+        except Exception as e:
+            logger.warning(f"Could not reconcile call {call_log.id}: {e}")
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(select(CallLog).where(CallLog.id == call_log.id))
+                cl = result.scalar_one_or_none()
+                if cl:
+                    cl.status = CallStatus.COMPLETED
+                    cl.call_outcome = "unknown"
+                    cl.ended_at = cl.ended_at or datetime.utcnow()
+                    await db.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
@@ -66,6 +138,7 @@ async def lifespan(app: FastAPI):
     os.makedirs("./audio_cache", exist_ok=True)
     async with AsyncSessionLocal() as db:
         await seed_carriers(db)
+    await _reconcile_stale_calls()
     yield
 
 

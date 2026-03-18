@@ -101,8 +101,8 @@ class ElevenLabsCallService:
         from app.database import AsyncSessionLocal
 
         settings = get_settings()
-        # In test mode, cap monitoring to TEST_MODE_MAX_SECONDS; otherwise poll up to 10 min.
-        max_polls = (settings.test_mode_max_seconds // 5) if settings.test_mode else 120
+        # Poll every 5s: test mode uses TEST_MODE_MAX_SECONDS cap, otherwise poll up to 30 min.
+        max_polls = (settings.test_mode_max_seconds // 5) if settings.test_mode else 360
 
         logger.info(f"Monitoring conversation {conversation_id} for call {call_log_id} (max_polls={max_polls})")
 
@@ -188,6 +188,31 @@ class ElevenLabsCallService:
                         })
             except Exception as e:
                 logger.error(f"Test mode force-hangup failed for {call_log_id}: {e}")
+
+        # If monitoring exhausted (non-test mode) and call never ended, mark completed
+        if not call_ended and not settings.test_mode:
+            logger.warning(f"Monitor exhausted for call {call_log_id}, marking completed")
+            try:
+                active_statuses = [
+                    CallStatus.QUEUED, CallStatus.RINGING,
+                    CallStatus.IN_PROGRESS, CallStatus.ON_HOLD, CallStatus.TRANSFERRING,
+                ]
+                async with AsyncSessionLocal() as db:
+                    result = await db.execute(select(CallLog).where(CallLog.id == call_log_id))
+                    call_log = result.scalar_one_or_none()
+                    if call_log and call_log.status in active_statuses:
+                        call_log.status = CallStatus.COMPLETED
+                        call_log.call_outcome = "timeout"
+                        call_log.ended_at = datetime.utcnow()
+                        await db.commit()
+                        await manager.broadcast("call:ended", {
+                            "call_log_id": call_log_id,
+                            "ticket_id": str(call_log.ticket_id),
+                            "status": "completed",
+                            "outcome": "timeout",
+                        })
+            except Exception as e:
+                logger.error(f"Monitor exhaust cleanup failed for {call_log_id}: {e}")
 
 
 elevenlabs_call_service = ElevenLabsCallService()
